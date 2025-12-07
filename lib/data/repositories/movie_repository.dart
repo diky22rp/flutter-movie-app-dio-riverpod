@@ -25,8 +25,19 @@ class MovieRepository {
       url = '/movie/popular';
     }
 
-    final response = await dio.get(url, queryParameters: params);
-    final results = response.data['results'] as List;
-    return results.map((e) => MovieModel.fromJson(e)).toList();
+    try {
+      final response = await dio.get(url, queryParameters: params);
+      final results = response.data['results'] as List;
+      return results.map((e) => MovieModel.fromJson(e)).toList();
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch movies: ${e.message}');
+    }
+  }
+
+  Future<List<MovieModel>> searchMovies({
+    required String query,
+    int page = 1,
+  }) async {
+    return fetchMovies(page: page, query: query);
   }
 }

@@ -3,28 +3,32 @@ import 'package:flutter_movie_app_dio_riverpod/data/repositories/movie_repositor
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dio_provider.dart';
 
+// Repository Provider
 final movieRepositoryProvider = Provider<MovieRepository>((ref) {
-  return MovieRepository(dio: ref.watch(dioProvider));
+  final dio = ref.watch(dioProvider);
+  return MovieRepository(dio: dio);
 });
 
+// MoviesNotifier infinite scroll + search
 class MoviesNotifier extends Notifier<List<MovieModel>> {
   late final MovieRepository repository;
   int _currentPage = 1;
   bool _isLoading = false;
   bool _hasNext = true;
 
+  bool get isLoading => _isLoading;
+
   @override
   List<MovieModel> build() {
-    repository = ref.watch(movieRepositoryProvider);
+    repository = ref.read(movieRepositoryProvider);
     fetchNextPage();
     return [];
   }
 
-  bool get isLoading => _isLoading;
-
   Future<void> fetchNextPage() async {
     if (_isLoading || !_hasNext) return;
     _isLoading = true;
+
     try {
       final movies = await repository.fetchMovies(page: _currentPage);
       if (movies.isEmpty) {
@@ -37,9 +41,28 @@ class MoviesNotifier extends Notifier<List<MovieModel>> {
       _isLoading = false;
     }
   }
+
+  Future<void> searchMovies(String query) async {
+    _isLoading = true;
+    _currentPage = 1;
+    _hasNext = true;
+
+    try {
+      final results = await repository.searchMovies(query: query, page: 1);
+      state = results;
+    } finally {
+      _isLoading = false;
+    }
+  }
+
+  void reset() {
+    _currentPage = 1;
+    _hasNext = true;
+    state = [];
+    fetchNextPage();
+  }
 }
 
-// Provider modern
 final moviesProvider = NotifierProvider<MoviesNotifier, List<MovieModel>>(
   () => MoviesNotifier(),
 );
